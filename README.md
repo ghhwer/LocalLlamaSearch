@@ -4,5 +4,10 @@ This is a simple implementation of a local search server that uses LLMs to searc
 
 ## Installation
 Make sure to tune `docker-compose.hardware.yml` to your needs. 
-After starting docker, please run /scripts/bootstrap_models.py to download the models.
-You may want to run /scripts/llm_embedding.py to test both the LLM and the embeddings endpoints.
+
+After starting running docker compose, you can run the following commands to bootstrap the models and test the servers:
+```sh
+pip3 install -r requirements.txt
+python3 /scripts/bootstrap_models.py
+python3 /scripts/llm_embedding.py
+```
