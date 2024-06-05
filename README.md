@@ -6,6 +6,6 @@ This is a simple implementation of a local search server that uses LLMs to searc
 Currently there is no installation script also there is no CPU only version. 
 The only way to run this is to have a GPU with CUDA capabilities.
 
-Make sure that you have a model in the `models` directory. You can download llama.cpp compatible model from the [Hugging Face Model Hub](https://huggingface.co/models). Don't forget to update the `docker-compose.yml` file with the model name.
-
-This project is just for educational purposes and is not intended to be used in production. This is the reason why there is no installation script hehe.
+Make sure to tune `docker-compose.hardware.yml` to your needs. 
+After starting docker, please run /scripts/bootstrap_models.py to download the models.
+You may want to run /scripts/llm_embedding.py to test both the LLM and the embeddings endpoints
