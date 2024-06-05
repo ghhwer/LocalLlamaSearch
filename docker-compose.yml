@@ -1,15 +1,15 @@
-version: "3.9"
 services:
-  llama:
-    build: llama-cpp-engine/.
-    environment:
-      - GGML_CUDA_NO_PINNED=1
-      - LLAMA_CTX_SIZE=2048
-      - LLAMA_MODEL=/models/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf
-      - LLAMA_N_GPU_LAYERS=99
+  ollama-gpu:
+    image: ollama/ollama
     volumes:
-      - ./models:/models
+      - ./models-gpu:/models
+      - ./ollama-gpu-data:/root/.ollama
     ports:
-      - target: 8080
-        published: 8080
-        mode: host
+      - "11434:11434"
+  ollama-cpu:
+    image: ollama/ollama
+    volumes:
+      - ./models-cpu:/models
+      - ./ollama-gpu-data:/root/.ollama
+    ports:
+      - "11435:11434"
