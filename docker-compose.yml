@@ -1,0 +1,16 @@
+services:
+  ollama-gpu:
+    image: ollama/ollama
+    volumes:
+      - ollama-gpu-data:/root/.ollama
+    ports:
+      - "11434:11434"
+  ollama-cpu:
+    image: ollama/ollama
+    volumes:
+      - ollama-cpu-data:/root/.ollama
+    ports:
+      - "11435:11434"
+volumes:
+  ollama-gpu-data:
+  ollama-cpu-data:
