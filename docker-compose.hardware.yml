@@ -7,11 +7,11 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-          memory: 10G
-          cpus: '2'
+          memory: 15G
+          cpus: '6'
         limits:
-          memory: 10g
-          cpus: '2'
+          memory: 20g
+          cpus: '8'
   ollama-cpu:
     deploy:
       resources:

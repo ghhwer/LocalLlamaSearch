@@ -5,7 +5,7 @@ GPU_SERVER_URL = 'http://localhost:11434'
 CPU_SERVER_URL = 'http://localhost:11435'
 
 def main():
-   print("Pulling models onto the servers")
+   print("Pulling models... This may take a while")
    requests.post(f'{GPU_SERVER_URL}/api/pull', json={
       "name": "llama3"
    })
