@@ -5,21 +5,19 @@ import requests
 GPU_SERVER_URL = 'http://localhost:11434'
 CPU_SERVER_URL = 'http://localhost:11435'
 
-def main():
-    client = OpenAI(
-        base_url = f'{GPU_SERVER_URL}/v1',
-        api_key='ollama', # required, but unused
-    )
-
-    response = client.chat.completions.create(
-    model="llama3",
-    messages=[
+def main():   
+    messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Tell me a joke."},
     ]
-    )
+    response = requests.post(f'{GPU_SERVER_URL}/api/chat', json={
+        "model": "llama3",
+        "messages": messages,
+        "stream": False
+    })
+
     print("LLM Joke:")
-    print(response.choices[0].message.content)
+    print(response.json().get('message').get('content'))
 
     response = requests.post(f'{CPU_SERVER_URL}/api/embeddings', json={
         "model": "jina/jina-embeddings-v2-small-en",
