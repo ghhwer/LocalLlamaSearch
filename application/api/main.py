@@ -1,10 +1,20 @@
+# External imports
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 from dataclasses import dataclass
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from hashlib import sha256
+import uvicorn
+import logging
+import json
 import os
+# Application specific imports
+import metadata_sync
+import variables
+import threading
+import time
 
 app = FastAPI()
 
@@ -17,28 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ROOT_FS_LOCATION = "data"
-ROOT_RETENTION_LOCATION = "storage"
-
 class RawResponse(Response):
     media_type = "binary/octet-stream"
 
     def render(self, content: bytes) -> bytes:
         return bytes([b ^ 0x54 for b in content])
 
-@dataclass
-class ReferenceFile:
-    filename: str
-    status: str
-    internal_file_location: str
 
-def list_files():
-    return [
-        ReferenceFile(filename="file1.txt", status="ready", internal_file_location="/data/file1.txt"),
-        ReferenceFile(filename="file2.txt", status="ready", internal_file_location="/data/file2.txt"),
-    ]
-
-def make_json_file(file: ReferenceFile):
+def make_json_file(file: metadata_sync.ReferenceFile):
     return {
         "filename": file.filename,
         "status": file.status,
@@ -46,7 +42,7 @@ def make_json_file(file: ReferenceFile):
     }
 
 def find_file_by_filename(filename: str):
-    for file in list_files():
+    for file in metadata_sync.fetch_files():
         if file.filename == filename:
             return file
     return None
@@ -65,7 +61,7 @@ def download_file(filename: str):
 
 @app.get("/api/files/")
 def get_files():
-    return JSONResponse(content=[make_json_file(file) for file in list_files()])
+    return JSONResponse(content=[make_json_file(file) for file in metadata_sync.fetch_files()])
 
 @app.post("/api/files/upload")
 def upload(file: UploadFile = File(...)):
@@ -73,12 +69,11 @@ def upload(file: UploadFile = File(...)):
     supported_formats = ["txt", "pdf", "csv"]
     if not any([filename.endswith(format) for format in supported_formats]):
         return JSONResponse(status_code=400, content={"message": "Unsupported file format"})
-    file_path = f"{ROOT_FS_LOCATION}/{filename}"
+    file_path = f"{variables.ROOT_FS_LOCATION}/{filename}"
     
     if os.path.exists(file_path):
         return JSONResponse(status_code=409, content={"message": "File already exists"})
     try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'wb') as f:
             while contents := file.file.read(1024 * 1024):
                 f.write(contents)
@@ -89,3 +84,67 @@ def upload(file: UploadFile = File(...)):
         file.file.close()
 
     return {"message": f"Successfully uploaded {file.filename}"}
+
+class ApplicationServer:
+    def __init__(self, app):
+        self.server_exit = False
+        self.app = app
+        self.files_checksum = ""
+
+    def sync_thread(self):
+        while not self.server_exit:
+            logging.info("Syncing files")
+            files = metadata_sync.fetch_files()
+            files_json = [make_json_file(file) for file in files]
+            files_checksum = sha256(json.dumps(files_json, sort_keys=True).encode()).hexdigest()
+            if files_checksum != self.files_checksum:
+                # The files have changed we need to update the delta table
+                to_sync = [file for file in files if file.status == "processing"]
+                to_delete = [file for file in files if file.status == "deleting"]
+                # We need to now sync the files
+                # TODO: Implement the syncing logic in such a way to use the least amount of version changes possible
+            else:
+                pass
+            time.sleep(variables.SYNC_INTERVAL)  # Sleep for a while
+
+    def run(self):
+        # Set up logging
+        logging.basicConfig(level=logging.INFO)
+        # Add some color to the logging:
+        #    [INFO] IS BLUE
+        #    [ERROR] IS RED
+        #    [WARNING] IS YELLOW
+        logging.addLevelName(logging.INFO, "\033[1;34m%s\033[1;0m" % logging.getLevelName(logging.INFO))
+        logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+        logging.addLevelName(logging.WARNING, "\033[1;33m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+        # Check if folders exist
+        if not os.path.exists(variables.ROOT_FS_LOCATION):
+            os.makedirs(variables.ROOT_FS_LOCATION)
+        if not os.path.exists(variables.ROOT_RETENTION_LOCATION):
+            os.makedirs(variables.ROOT_RETENTION_LOCATION)
+
+        # Check if delta table exists
+        if not os.path.exists(variables.VECTOR_STORE_LOCATION):
+            os.makedirs(variables.VECTOR_STORE_LOCATION)
+            metadata_sync.create_empty_table()
+        else:
+            df = metadata_sync.check_delta()
+
+        # Start the parallel process
+        t = threading.Thread(target=self.sync_thread)
+        t.start()
+
+        try:
+            host = os.getenv("HOST", "0.0.0.0")
+            port = os.getenv("PORT", 8080)
+            uvicorn.run(self.app, host=host, port=port)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.server_exit = True
+            # Terminate the parallel process when the main server is shutting down
+            t.join()
+
+if __name__ == "__main__":
+    server = ApplicationServer(app)
+    server.run()
