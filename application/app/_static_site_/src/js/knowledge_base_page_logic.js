@@ -1,17 +1,31 @@
 // ======= KNOWLEDGE BASE PAGE LOGIC ==========
 var Grid = gridjs.Grid;
 var html = gridjs.html;
-const API_URI = 'localhost:8080';
 
 var lastFilesChecksum = '';
 
 var downloadFileWithId = function(id) {
     // download file with id
     console.info('Downloading file with id: ' + id)
+    url = `http://${API_URI}/api/files/${id}`;
+    // Open in a new tab
+    window.open(url, '_blank');
+    updateFileUI();
 }
 var deleteFileWithId = function(id) {
     // delete file with id
     console.info('Deleting file with id: ' + id)
+    url = `http://${API_URI}/api/files/${id}`;
+    fetch(url, {
+        method: 'DELETE'
+    }).then(response => {
+        if (response.status == 200) {
+            showSuccessAlert('File deleted successfully');
+        } else {
+            showFailureAlert('Failed to delete file');
+        }
+    });
+    updateFileUI();
 }
 
 var formatStatus = function(cell) {
@@ -50,7 +64,6 @@ var formatActions = function(_, row) {
     if (canDelete == false && canDownload == false) {
         return html('<div class="m-2 text-muted no-select">N/A</div>');
     }
-    console.log(html_str);
     return html(`<div class="d-flex justify-content-left">${html_str}</div>`);
 }
 

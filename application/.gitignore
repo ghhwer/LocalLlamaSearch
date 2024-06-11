@@ -1,2 +1,2 @@
-api/data/*
-api/storage/*
+app/data/*
+app/storage/*

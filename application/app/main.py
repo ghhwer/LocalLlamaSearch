@@ -1,20 +1,17 @@
 # External imports
 from fastapi import FastAPI, Response
-from fastapi.responses import JSONResponse
-from starlette.responses import StreamingResponse
-from dataclasses import dataclass
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from hashlib import sha256
+import threading
 import uvicorn
 import logging
-import json
 import os
 # Application specific imports
 import metadata_sync
 import variables
-import threading
-import time
+from ai.ai_functions import ai_query, ai_follow_up_query
 
 app = FastAPI()
 
@@ -31,15 +28,8 @@ class RawResponse(Response):
     media_type = "binary/octet-stream"
 
     def render(self, content: bytes) -> bytes:
-        return bytes([b ^ 0x54 for b in content])
+        return content
 
-
-def make_json_file(file: metadata_sync.ReferenceFile):
-    return {
-        "filename": file.filename,
-        "status": file.status,
-        "internal_file_location": file.internal_file_location
-    }
 
 def find_file_by_filename(filename: str):
     for file in metadata_sync.fetch_files():
@@ -47,7 +37,13 @@ def find_file_by_filename(filename: str):
             return file
     return None
 
+app.mount("/static", StaticFiles(directory="./_static_site_"), name="static")
+
 @app.get("/")
+def read_root():
+    return RedirectResponse(url="/static/index.html")
+
+@app.get("/api/health")
 def read_root():
     return "Application is running!"
 
@@ -61,7 +57,15 @@ def download_file(filename: str):
 
 @app.get("/api/files/")
 def get_files():
-    return JSONResponse(content=[make_json_file(file) for file in metadata_sync.fetch_files()])
+    return JSONResponse(content=[file.as_dict() for file in metadata_sync.fetch_files()])
+
+@app.delete("/api/files/{filename}")
+def delete_file(filename: str):
+    file = find_file_by_filename(filename)
+    if file is None:
+        return JSONResponse(status_code=404, content={"message": "File not found"})
+    os.remove(file.internal_file_location)
+    return JSONResponse(content={"message": f"Successfully deleted {filename}"})
 
 @app.post("/api/files/upload")
 def upload(file: UploadFile = File(...)):
@@ -85,6 +89,17 @@ def upload(file: UploadFile = File(...)):
 
     return {"message": f"Successfully uploaded {file.filename}"}
 
+@app.post("/api/query")
+def query(body: dict):
+    query = body.get("query")
+    return JSONResponse(content=ai_query(query), status_code=200)
+
+@app.post("/api/query/followup")
+def followup(body: dict):
+    query = body.get("query")
+    prompt_history = body.get("prompt_history")
+    return JSONResponse(content=ai_follow_up_query(query, prompt_history), status_code=200)
+
 class ApplicationServer:
     def __init__(self, app):
         self.server_exit = False
@@ -93,19 +108,7 @@ class ApplicationServer:
 
     def sync_thread(self):
         while not self.server_exit:
-            logging.info("Syncing files")
-            files = metadata_sync.fetch_files()
-            files_json = [make_json_file(file) for file in files]
-            files_checksum = sha256(json.dumps(files_json, sort_keys=True).encode()).hexdigest()
-            if files_checksum != self.files_checksum:
-                # The files have changed we need to update the delta table
-                to_sync = [file for file in files if file.status == "processing"]
-                to_delete = [file for file in files if file.status == "deleting"]
-                # We need to now sync the files
-                # TODO: Implement the syncing logic in such a way to use the least amount of version changes possible
-            else:
-                pass
-            time.sleep(variables.SYNC_INTERVAL)  # Sleep for a while
+            metadata_sync.sync_tick(self.files_checksum)
 
     def run(self):
         # Set up logging

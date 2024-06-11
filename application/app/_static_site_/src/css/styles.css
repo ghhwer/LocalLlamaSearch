@@ -33,7 +33,7 @@ body {
     height: 100vh;
 }
 .logo-text {
-    height: 110px;   
+    height: 6vh;   
     font-weight: bold;
     background-color: #f8f9fa;
     text-align: center;
@@ -47,11 +47,13 @@ body {
 .header {
     background-color: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
-    justify-content: center;
     height: 6vh;
     justify-content: left;
     padding-top: 1vh;
     padding-left: 1vh;
+}
+.header h5 {
+    margin-top: 0.6vh;
 }
 
 .chat-content-expanded {
@@ -95,13 +97,8 @@ input:focus {
     word-wrap: break-word;
     margin-left: auto;
 }
-
-.chat-bubble-assistant-loading {
-    padding: 0.5em;
-    margin-bottom: 2vh;
-    max-width: 100%;
-    word-wrap: break-word;
-    margin-left: auto;
+.hide {
+    display: none !important;
 }
 
 .chat-bubble-user {
