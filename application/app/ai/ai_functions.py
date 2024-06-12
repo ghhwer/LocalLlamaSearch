@@ -71,7 +71,8 @@ def ai_query(query):
         embeddings,
         variables.VECTOR_STORE_LOCATION,
         top_k=variables.TOP_K_RESULTS,
-        n_neighboors=variables.NEIGHBOORS 
+        n_neighboors=variables.NEIGHBOORS,
+        min_similarity=variables.MIN_SIMILARITY
     )
     
     SYSTEM_PROMPT = """You are an expert Q&A system that is trusted around the world.

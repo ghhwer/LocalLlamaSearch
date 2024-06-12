@@ -12,7 +12,7 @@ def change_orientation_dict(dict_data):
         result.append({key: dict_data[key][i] for key in dict_data.keys()})
     return result
 
-def query_vector_emb(query_embedding, delta_location, top_k=2, n_neighboors=1):
+def query_vector_emb(query_embedding, delta_location, top_k=2, n_neighboors=1, min_similarity=0.75):
     df_emb = pl.scan_delta(delta_location)
     df_q = (
         df_emb
@@ -25,6 +25,7 @@ def query_vector_emb(query_embedding, delta_location, top_k=2, n_neighboors=1):
                 )
                 .alias("similarity")
             )
+            .filter(pl.col("similarity") >= min_similarity)
     )
 
     df_q_results = (

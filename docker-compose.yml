@@ -5,16 +5,12 @@ services:
       - ollama-gpu-data:/root/.ollama
     ports:
       - "11434:11434"
-    networks:
-      - application-network
   ollama-cpu:
     image: ollama/ollama
     volumes:
       - ollama-cpu-data:/root/.ollama
     ports:
       - "11435:11434"
-    networks:
-      - application-network
   application:
     build: application/.
     volumes:
@@ -30,8 +26,6 @@ services:
       - APP_CPU_SERVER_URL=http://ollama-cpu:11434
       - APP_ASSISTANT_TEMPERATURE=0.2
       - APP_KEYWORDS_TEMPERATURE=0.2
-    networks:
-      - application-network
     depends_on:
       - ollama-gpu
       - ollama-cpu
@@ -40,5 +34,3 @@ volumes:
   ollama-cpu-data:
   application-data:
   application-delta:
-networks:
-  application-network:

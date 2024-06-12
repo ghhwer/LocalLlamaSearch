@@ -66,6 +66,6 @@ def approx_sentense_split(text, chunk_target_size=1000, overlap=20, min_chunk_si
 def sentense_split_raw_text(text, chunk_target_size=1000, overlap=20, min_chunk_size=200, paragraph_sep='\n\n', chunking_regex='[^,\.;]+[,\.;]?', word_sep=' ') -> list[str]:
     # Clean the text a bit
     text = re.sub(r" +", " ", text) 
-    text = re.sub(r"\n\n\n+", paragraph_sep, text)
+    text = re.sub(r"\n\n+", paragraph_sep, text)
     # Split the text into chunks
     return approx_sentense_split(text, chunk_target_size, overlap, min_chunk_size, paragraph_sep, chunking_regex, word_sep)
