@@ -11,6 +11,26 @@ services:
       - ollama-cpu-data:/root/.ollama
     ports:
       - "11435:11434"
+  application:
+    build: application/.
+    volumes:
+      - application-data:/app-data
+      - application-delta:/app-delta
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ROOT_FS_LOCATION=/app-data
+      - APP_ROOT_RETENTION_LOCATION=/app-delta
+      - APP_SYNC_INTERVAL_SECONDS=10
+      - APP_GPU_SERVER_URL=http://ollama-gpu:11434
+      - APP_CPU_SERVER_URL=http://ollama-cpu:11434
+      - APP_ASSISTANT_TEMPERATURE=0.2
+      - APP_KEYWORDS_TEMPERATURE=0.2
+    depends_on:
+      - ollama-gpu
+      - ollama-cpu
 volumes:
   ollama-gpu-data:
   ollama-cpu-data:
+  application-data:
+  application-delta:
